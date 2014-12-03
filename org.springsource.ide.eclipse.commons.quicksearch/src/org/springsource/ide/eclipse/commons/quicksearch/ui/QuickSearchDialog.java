@@ -110,6 +110,7 @@ import org.eclipse.ui.internal.WorkbenchMessages;
 import org.eclipse.ui.internal.ide.IDEWorkbenchPlugin;
 import org.eclipse.ui.progress.UIJob;
 import org.springsource.ide.eclipse.commons.quicksearch.core.LineItem;
+import org.springsource.ide.eclipse.commons.quicksearch.core.QuickTextJobListener;
 import org.springsource.ide.eclipse.commons.quicksearch.core.QuickTextQuery;
 import org.springsource.ide.eclipse.commons.quicksearch.core.QuickTextQuery.TextRange;
 import org.springsource.ide.eclipse.commons.quicksearch.core.QuickTextSearchRequestor;
@@ -176,8 +177,10 @@ public class QuickSearchDialog extends SelectionStatusDialog {
 //	}
 	
 	private UIJob refreshJob = new UIJob("Refresh") {
+		
 		@Override
 		public IStatus runInUIThread(IProgressMonitor monitor) {
+			QuickTextJobListener.debug("Refresh Job: entering 'runInUIThread' method");
 			refresh();
 			return Status.OK_STATUS;
 		}
@@ -381,6 +384,10 @@ public class QuickSearchDialog extends SelectionStatusDialog {
 		this.setTitle("Quick Text Search");
 		this.context = new QuickSearchContext(window);
 		this.multi = false;
+		if (QuickTextJobListener.DEBUG) {
+			refreshJob.addJobChangeListener(QuickTextJobListener.jobListener());
+			refreshJob.addJobChangeListener(QuickTextJobListener.slowJobChecker(5000));
+		}
 		contentProvider = new ContentProvider();
 		selectionMode = NONE;
 	}
@@ -1304,6 +1311,7 @@ public class QuickSearchDialog extends SelectionStatusDialog {
 				this.searcher = new QuickTextSearcher(newFilter, context.createPriorityFun(), new QuickTextSearchRequestor() {
 					@Override
 					public void add(LineItem match) {
+						QuickTextJobListener.debug("add match: "+match);
 						contentProvider.add(match);
 						contentProvider.refresh();
 					}

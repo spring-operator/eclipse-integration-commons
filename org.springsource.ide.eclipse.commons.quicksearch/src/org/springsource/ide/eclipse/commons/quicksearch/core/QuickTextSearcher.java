@@ -19,6 +19,8 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.IJobChangeListener;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
 import org.springsource.ide.eclipse.commons.quicksearch.core.priority.PriorityFunction;
@@ -26,6 +28,8 @@ import org.springsource.ide.eclipse.commons.quicksearch.util.JobUtil;
 import org.springsource.ide.eclipse.commons.quicksearch.util.LineReader;
 
 public class QuickTextSearcher {
+	
+	
 	private final QuickTextSearchRequestor requestor;
 	private QuickTextQuery query;
 	
@@ -85,6 +89,10 @@ public class QuickTextSearcher {
 		final SearchInFilesWalker job = new SearchInFilesWalker();
 		job.setPriorityFun(priorities);
 		job.setRule(matchesRule);
+		if (QuickTextJobListener.DEBUG) {
+			System.out.println("Creating SearchInFilesWalker JOB: "+job);
+			job.addJobChangeListener(QuickTextJobListener.jobListener());
+		}
 		job.schedule();
 		return job;
 	}
@@ -181,6 +189,9 @@ public class QuickTextSearcher {
 		public IncrementalUpdateJob() {
 			super("Update matches");
 			this.setRule(matchesRule);
+			if (QuickTextJobListener.DEBUG) {
+				this.addJobChangeListener(QuickTextJobListener.jobListener());
+			}
 			//This job isn't started automatically. It should be schedule every time
 			// there's a 'newQuery' set by the user/client.
 		}
@@ -250,6 +261,7 @@ public class QuickTextSearcher {
 		if (newQuery.equalsFilter(query)) {
 			return;
 		} 
+		QuickTextJobListener.debug("setQuery: "+newQuery);
 		this.newQuery = newQuery;
 		walker.suspend(); //The walker must be suspended so the update job can run, they share scheduling rule
 						 // so only one job can run at any time.
